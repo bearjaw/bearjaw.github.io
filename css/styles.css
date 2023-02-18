@@ -1,0 +1,334 @@
+/**
+*  Publish Foundation theme
+*  Copyright (c) John Sundell 2019
+*  MIT license, see LICENSE file for details
+*/
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    background: #fff;
+    color: #000;
+    font-family: Charter, Helvetica, Arial;
+    text-align: center;
+}
+
+.wrapper {
+    max-width: 900px;
+    margin-left: auto;
+    margin-right: auto;
+    padding: 40px;
+    text-align: left;
+}
+
+header {
+    background-color: #fff;
+}
+
+header .wrapper {
+    padding-top: 30px;
+    padding-bottom: 30px;
+    text-align: center;
+}
+
+header a {
+    text-decoration: none;
+}
+
+header .site-name {
+    font-size: 1.5em;
+    color: #000;
+    font-weight: bold;
+}
+
+nav {
+    font-family: Helvetica;
+    margin-top: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+}
+
+nav li {
+    display: inline-block;
+    margin: 0 7px;
+    line-height: 1.5em;
+}
+
+nav li a.selected {
+    font-family: Helvetica;
+}
+
+nav li a {
+    background-color: #FB2576;
+    color: white;
+    padding: 0.5em;
+    border-radius: 8px;
+}
+
+nav li a:hover, li.active a {
+    background-color: #150050;
+    color: white;
+}
+
+h1 {
+    margin-bottom: 20px;
+    font-size: 2em;
+}
+
+h2 {
+    margin: 20px 0;
+}
+
+h3  {
+    margin: 20px 0; 
+}
+
+p {
+    margin-bottom: 10px;
+    line-height: 1.5em;
+}
+
+a {
+    color: inherit;
+}
+
+blockquote {
+    background: #1a1a1a;
+    border-left: 10px solid #ccc;
+    margin: 1.5em 10px;
+    padding: 1em 10px .1em 10px;
+    quotes: "\201C""\201D""\2018""\2019";
+}
+
+.description {
+    margin-bottom: 40px;
+}
+
+header .header-container {
+        display: flex;
+        flex-direction: row;
+        align-items: flex-start;
+        justify-content: space-between;
+}
+
+header .profile-header-container {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+}
+
+header .header-text-container {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        padding-left: 16px;
+}
+
+.avatar {
+  vertical-align: middle;
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+}
+
+.article-info {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+}
+
+.separator {
+    padding-left: 1em;
+    padding-right: 1em;
+}
+
+.github-logo {
+    width: 40px;
+    height: 40px;
+    align-self: center;
+    background: url(images/github-mark.svg) center / cover;
+}
+
+header .header-subtitle {
+        font-style: italic;
+}
+
+header {
+    padding: 24px 24px 24px 24px;
+}
+
+.item-list > li {
+    display: block;
+    padding: 20px;
+    border-radius: 20px;
+    background-color: #eee;
+    margin-bottom: 20px;
+}
+
+.item-list > li:last-child {
+    margin-bottom: 0;
+}
+
+.item-list h1 {
+    margin-bottom: 15px;
+    font-size: 1.3em;
+}
+
+.item-list p {
+    margin-bottom: 0;
+}
+
+.tag-list {
+    margin-top: 15px;
+}
+
+.tag-list li, .tag {
+    display: inline-block;
+    background-color: #3F0071;
+    color: #ddd;
+    padding: 4px 6px;
+    border-radius: 5px;
+    margin-right: 5px;
+}
+
+.tag-list a, .tag a {
+    text-decoration: none;
+}
+
+.item-page .tag-list {
+    display: inline-block;
+}
+
+@keyframes slideInLeft {
+  from {
+    transform: translate3d(-100%, 0, 0);
+    visibility: visible;
+    opacity: 0;
+  }
+
+  to {
+    transform: translate3d(0, 0, 0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translate3d(100%, 0, 0);
+    visibility: visible;
+    opacity: 0;
+  }
+
+  to {
+    transform: translate3d(0, 0, 0);
+    opacity: 1;
+  }
+}
+
+.item-list-item-header {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+}
+
+.content {
+    margin-bottom: 40px;
+}
+
+.content h1 {
+    opacity: 0;
+    animation-duration: 0.5s;
+    animation-name: slideInLeft;
+    animation-delay: 0.1s;
+    animation-fill-mode: forwards;
+}
+
+.content h2 {
+    opacity: 0;
+    animation-duration: 0.5s;
+    animation-name: slideInLeft;
+    animation-delay: 0.1s;
+    animation-fill-mode: forwards;
+}
+
+.content h3 {
+    opacity: 0;
+    animation-duration: 0.5s;
+    animation-name: slideInLeft;
+    animation-delay: 0.1s;
+    animation-fill-mode: forwards;
+}
+
+.content p {
+    opacity: 0;
+    animation-duration: 0.5s;
+    animation-name: slideInRight;
+    animation-delay: 0.1s;
+    animation-fill-mode: forwards;
+}
+
+.content pre {
+    opacity: 0;
+    animation-duration: 0.5s;
+    animation-name: slideInRight;
+    animation-delay: 0.1s;
+    animation-fill-mode: forwards;
+}
+
+.content blockquote {
+    opacity: 0;
+    animation-duration: 0.5s;
+    animation-name: slideInRight;
+    animation-delay: 0.1s;
+    animation-fill-mode: forwards;
+}
+
+.browse-all {
+    display: block;
+    margin-bottom: 30px;
+}
+
+.all-tags li {
+    font-size: 1.4em;
+    margin-right: 10px;
+    padding: 6px 10px;
+}
+
+footer {
+    color: #8a8a8a;
+}
+
+@media (prefers-color-scheme: dark) {
+    body {
+        background-color: #000;
+    }
+
+    body, header .site-name {
+        color: #fff;
+    }
+
+    .item-list > li {
+        background-color: #150050;
+    }
+
+    header {
+        background-color: #000;
+    }
+
+        .github-logo {
+            width: 40px;
+            height: 40px;
+            align-self: center;
+            background: url(images/github-mark-white.svg) center / cover;
+        }
+}
+
+@media (max-width: 600px) {
+    .wrapper {
+        padding: 40px 20px;
+    }
+}

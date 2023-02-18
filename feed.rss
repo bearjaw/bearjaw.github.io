@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/"><channel><title>bearjaw.dev</title><description>Doing swifty things 1-bit at a time 🚀</description><link>https://bearjaw.dev</link><language>en</language><lastBuildDate>Wed, 15 Feb 2023 11:56:42 +0100</lastBuildDate><pubDate>Wed, 15 Feb 2023 11:56:42 +0100</pubDate><ttl>250</ttl><atom:link href="https://bearjaw.dev/feed.rss" rel="self" type="application/rss+xml"/><item><guid isPermaLink="true">https://bearjaw.dev/posts/2023/1/hello</guid><title>Autolayout Wrapper</title><description>A brief dive into writing a wrapper around AutoLayout</description><link>https://bearjaw.dev/posts/2023/1/hello</link><pubDate>Sun, 29 Jan 2023 14:57:00 +0100</pubDate><content:encoded><![CDATA[<h1>Autolayout Wrapper</h1><h3><em>Disclaimer</em>:</h3><p><em>Yes, there are a lot of AutoLayout wrappers available. This is mainly me writing down my approach of creating a thin, lightweight, and flexible wrapper around AutoLayout.</em></p><h2>Some considerations</h2><p>There are many AutoLayout wrappers out there. A project that I worked on recently used <a href="https://github.com/SnapKit/SnapKit">SnapKit</a>. And while there’s nothing wrong with using third-party dependencies, I prefer to learn and understand Apple’s APIs first and then write a thin wrapper around it myself to make my life easier. It also saves you from adding another third-party-dependency to your app.</p><p>Now you could say why am I even bothering with all these old APIs and technologies and not use SwiftUI instead? Well, SwiftUI has only been around since iOS 13 which kind of limits your usage of SwiftUI in production if your app still needs to support older versions of iOS.</p><p>In personal projects I did start to experiment a little with SwiftUI but so far UIKit has been a good friend to me. There’s also no point in discussing whether you should <em>only</em> use or learn one or the other. Like many already pointed out it depends on what you want to do and they complement each other quite well.</p><h2>Time travel</h2><p>When I started out as an iOS developer AutoLayout wasn’t a thing yet, so I used to calculate my views’ origins and sizes manually like this:</p><pre><code><span class="keyword">import</span> Foundation
+
+<span class="keyword">final class</span> MyView: <span class="type">UIView</span> {
+
+    <span class="keyword">private let</span> label = <span class="type">UILabel</span>()
+    
+    ...
+    <span class="keyword">override func</span> layoutSubviews() {
+        <span class="keyword">super</span>.<span class="call">layoutSubviews</span>()
+        <span class="keyword">let</span> origin = ...
+        <span class="keyword">let</span> size = ...
+        label.<span class="property">frame</span> = <span class="type">CGRect</span>(origin: origin, size: size)
+    }
+    ...
+}
+</code></pre><p>While this method works well and can be quite efficient when it comes to rendering, it is definitely more verbose and time consuming than SwiftUI or AutoLayout (Once you finally get a hang of it). Another thing to keep in mind is that by calculating your frames directly, ideally dynamically, your UI probably wouldn't support right-to-left languages properly.</p><p>It took me quite some time to become familiar with AutoLayout. The API seems very cumbersome and heavy to use. To me most of the methods felt counterintuitive and seemed to do the opposite of what I expected. It definitely got better once we got <code>anchors</code> in iOS 9. However debugging AutoLayout is a mess and time consuming. There’s a reason why <a href="_https://www.wtfautolayout.com_">WTFAutoLayout</a> exists.</p><p>Sometimes it’s easy and you only forgot to set <code>view.<span class="property">translatesAutoresizingMaskIntoConstraints</span> = <span class="keyword">false</span></code>. Other times the height and vertical position are ambiguous and it seems impossible to grasp why. Also it's important to remember to call <code>constraint.<span class="property">active</span> = <span class="keyword">true</span></code> to actually tell the OS that it should use and evaluate that constraint. That’s quite a lot of things you always have to do and remember. It proved therefore quite useful to create a thin wrapper around common AutoLayout functionality.</p><p>This slows your development velocity down quite a bit. At the same time you might not always have the luxury to sit down and develop your own libraries to fix these issues during your day to day job. What you can do though is introduce this process step by step. Every time you find yourself writing a specific UI building block you could extract the code into a reusable function.</p><h2>Putting it all together</h2><p>One of the problems of AutoLayout is that when using constraints you need to remember to set <code>translatesAutoresizingMaskIntoConstraints</code> to <code><span class="keyword">false</span></code>. You can make your life easier by leveraging property wrappers. I really liked this option. It makes it clear to anyone reading your code that this view is using constraints and that our favourite property has already been set to <code><span class="keyword">false</span></code>. Property wrappers in general are an amazing tool to have in Swift.</p><pre><code><span class="keyword">@propertyWrapper
+struct</span> AutoLayoutable&lt;T: <span class="type">UIView</span>&gt; {
+    <span class="keyword">var</span> wrappedValue: <span class="type">T</span> {
+        <span class="keyword">didSet</span> {
+            wrappedValue.<span class="property">translatesAutoresizingMaskIntoConstraints</span> = <span class="keyword">false</span>
+        }
+    }
+    
+    <span class="keyword">init</span>(wrappedValue: <span class="type">T</span>) {
+        <span class="keyword">self</span>.<span class="property">wrappedValue</span> = wrappedValue
+        wrappedValue.<span class="property">translatesAutoresizingMaskIntoConstraints</span> = <span class="keyword">false</span>
+    }
+}
+</code></pre><p>However there are some drawbacks with this. You can’t really use <code><span class="keyword">lazy var</span></code> with property wrappers which could be an issue if you’re looking to squeeze out as much efficiency as possible from your views. The most efficient view is the one that isn’t rendered. You also can't use <code><span class="keyword">let</span></code>s. Depending on your coding style and / or your needs it could be better to manually set the value.</p><h3>Example</h3><pre><code><span class="keyword">final class</span> DetailView: <span class="type">UIView</span> {
+
+    <span class="keyword">@AutoLayoutable
+    private var</span> labelTitle = <span class="type">UILabel</span>()
+
+    <span class="keyword">@AutoLayoutable
+    private var</span> labelSubtitle = <span class="type">UILabel</span>()
+    
+}
+</code></pre><p>One thing that bothered me with Apple's AutoLayout API is that it just feels heavy and hard to read. Coming from Objective-C where methods were always quite expressive and stated clear intent, my wrapper therefore had to be declaritive and readable as well.</p><p>By using <code><span class="call">pinToTop</span>(of:space:priority)</code> it became much clearer to me what I wanted to achieve without getting too much into the details of how I want to achieve it. Another idea I took into consideration was to actually have my constraints be expressible using <code><span class="keyword">enum</span></code>s. That has the advantage of reducing the number of methods you'd need to memorise and use. You could maybe pass an array of anchors that would then translate to the correct constraints.</p><p>I still might refactor my current version to a more enum driven one. For now I wanted to keep things simple. The implementation of <code>pinToTop</code> is pretty straightforward:</p><pre><code><span class="keyword">extension</span> <span class="type">UIView</span> {
+    
+    <span class="keyword">@discardableResult
+    func</span> pinToTop(of view: <span class="type">UIView</span>,
+                  space: <span class="type">CGFloat</span>,
+                  priority: <span class="type">UILayoutPriority</span> = .<span class="dotAccess">defaultHigh</span>) -&gt; <span class="type">NSLayoutConstraint</span> {
+        <span class="keyword">let</span> constraint = topAnchor.<span class="call">constraint</span>(equalTo: view.<span class="property">topAnchor</span>, constant: space)
+        constraint.<span class="property">priority</span> = priority
+        constraint.<span class="property">isActive</span> = <span class="keyword">true
+        return</span> constraint
+    }
+    
+}
+</code></pre><p>One thing I noticed is that sometimes you need to adjust the constant or activate or deactivate your constraints. Using <code><span class="keyword">@discardableResult</span></code> solves that issue quite well. Now you can get a reference to the constraint and animate a UI change for example.</p><p>Usally you also want some kind of spacing between two UI elements. The constant for trailling, bottom anchors uses a negative value and for top, leading uses positive values. Again this little <em>quirk</em> in AutoLayout is something that makes sense once you understand that it reflects the coordinate system of the OS. To make my life easier I only use positive values on the call site and my implementation handles the cases correctly.</p><h2>Conclusion</h2><p>I didn't include all extensions I created but the rest follow the same pattern so it's quite easy to extend and maintain. My layout code went from a lot of repetitive code to one liners:</p><pre><code><span class="keyword">private func</span> configureConstraints() {
+    titleLabel.<span class="call">pinToTop</span>(of: <span class="keyword">self</span>, space: spacer4)
+    titleLabel.<span class="call">pinToSides</span>(of: <span class="keyword">self</span>, space: spacer4)
+    detailLabel.<span class="call">pinTopToBottom</span>(of: <span class="keyword">self</span>, space: spacer2)
+    detailLabel.<span class="call">pinToSides</span>(of: <span class="keyword">self</span>, space: spacer4)
+    detailLabel.<span class="call">pinToBottom</span>(of: <span class="keyword">self</span>, space: spacer4)
+}
+</code></pre><p>This increased my speed in creating a completely new UIs immensely. Not only that but I gained a lot of readability and clear intend. Of course AutoLayout offers a lot more functionality and not everything is covered by my small library yet. But it also doesn't have to be complete. Since it's just an extension on UIView I can add functionality anytime I need it.</p><p>Since I adapted my small wrapper my broken AutoLayout constraints nearly vanished. There are still cases where you do need to scratch your head a little and think about content hugging priorities and compress resistances but that's also what keeps things interesting.</p><p>Thanks for readig! 🐶</p>]]></content:encoded></item></channel></rss>

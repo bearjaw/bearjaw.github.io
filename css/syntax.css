@@ -1,0 +1,140 @@
+pre {
+    margin-top: 1.5em;
+    margin-bottom: 1.5em;
+    background-color: #1a1a1a;
+    border-radius: 16px;
+}
+
+pre code {
+    font-family: monospace;
+    display: block;
+    padding: 20px;
+    color: #a9bcbc;
+    line-height: 1.4em;
+    font-size: 0.95em;
+    overflow-x: auto;
+    white-space: pre;
+    -webkit-overflow-scrolling: touch;
+}
+
+p code {
+    font-family: monospace;
+    background-color: #1a1a1a;
+    padding: 4px;
+}
+
+code {
+    color: #41A1C0;
+}
+
+p code .keyword {
+    color: #ee82b0;
+}
+
+p code .type {
+    color: #8281ca;
+}
+
+p code .call {
+    color: #348fe5;
+}
+
+p code .property {
+    color: #21ab9d;
+}
+
+p code .number {
+    color: #db6f57;
+}
+
+p code .string {
+    color: #fa641e;
+}
+
+p code .comment {
+    color: #6b8a94;
+}
+
+pre code .dotAccess {
+    color: #92b300;
+}
+
+pre code .preprocessing {
+    color: #b68a00;
+}
+
+pre code .keyword {
+    color: #ee82b0;
+}
+
+pre code .type {
+    color: #9EF1DD;
+}
+
+pre code .call {
+    color: #67B7A4;
+}
+
+pre code .property {
+    color: #5DD8FF;
+}
+
+pre code .number {
+    color: #db6f57;
+}
+
+pre code .string {
+    color: #fa641e;
+}
+
+pre code .comment {
+    color: #6b8a94;
+}
+
+pre code .dotAccess {
+    color: #92b300;
+}
+
+pre code .preprocessing {
+    color: #b68a00;
+}
+
+
+@media (prefers-color-scheme: light) { 
+    p code {
+            font-family: monospace;
+            background-color: #E8F2FF;
+            padding: 4px;
+    }
+        code {
+            color: black;
+        }
+                p code .keyword {
+                    color: #9B2393;
+                }
+        
+                p code .type {
+                    color: #0b4f79;
+                }
+        
+                p code .call {
+                    color: #326D74;
+                }
+        
+                p code .property {
+                    color: #815F03;
+                }
+        
+                p code .number {
+                    color: #1c00cf;
+                }
+        
+                p code .string {
+                    color: #C41A16;
+                }
+        
+                p code .comment {
+                    color: #5D6C79;
+                }
+        
+}
