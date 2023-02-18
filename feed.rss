@@ -1,4 +1,120 @@
-<?xml version="1.0" encoding="UTF-8"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/"><channel><title>bearjaw.dev</title><description>Doing swifty things 1-bit at a time 🚀</description><link>https://bearjaw.dev</link><language>en</language><lastBuildDate>Wed, 15 Feb 2023 11:56:42 +0100</lastBuildDate><pubDate>Wed, 15 Feb 2023 11:56:42 +0100</pubDate><ttl>250</ttl><atom:link href="https://bearjaw.dev/feed.rss" rel="self" type="application/rss+xml"/><item><guid isPermaLink="true">https://bearjaw.dev/posts/2023/1/hello</guid><title>Autolayout Wrapper</title><description>A brief dive into writing a wrapper around AutoLayout</description><link>https://bearjaw.dev/posts/2023/1/hello</link><pubDate>Sun, 29 Jan 2023 14:57:00 +0100</pubDate><content:encoded><![CDATA[<h1>Autolayout Wrapper</h1><h3><em>Disclaimer</em>:</h3><p><em>Yes, there are a lot of AutoLayout wrappers available. This is mainly me writing down my approach of creating a thin, lightweight, and flexible wrapper around AutoLayout.</em></p><h2>Some considerations</h2><p>There are many AutoLayout wrappers out there. A project that I worked on recently used <a href="https://github.com/SnapKit/SnapKit">SnapKit</a>. And while there’s nothing wrong with using third-party dependencies, I prefer to learn and understand Apple’s APIs first and then write a thin wrapper around it myself to make my life easier. It also saves you from adding another third-party-dependency to your app.</p><p>Now you could say why am I even bothering with all these old APIs and technologies and not use SwiftUI instead? Well, SwiftUI has only been around since iOS 13 which kind of limits your usage of SwiftUI in production if your app still needs to support older versions of iOS.</p><p>In personal projects I did start to experiment a little with SwiftUI but so far UIKit has been a good friend to me. There’s also no point in discussing whether you should <em>only</em> use or learn one or the other. Like many already pointed out it depends on what you want to do and they complement each other quite well.</p><h2>Time travel</h2><p>When I started out as an iOS developer AutoLayout wasn’t a thing yet, so I used to calculate my views’ origins and sizes manually like this:</p><pre><code><span class="keyword">import</span> Foundation
+<?xml version="1.0" encoding="UTF-8"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/"><channel><title>bearjaw.dev</title><description>Doing swifty things 1-bit at a time 🚀</description><link>https://bearjaw.dev</link><language>en</language><lastBuildDate>Sat, 18 Feb 2023 17:42:26 +0100</lastBuildDate><pubDate>Sat, 18 Feb 2023 17:42:26 +0100</pubDate><ttl>250</ttl><atom:link href="https://bearjaw.dev/feed.rss" rel="self" type="application/rss+xml"/><item><guid isPermaLink="true">https://bearjaw.dev/posts/2023/2/build-testable-networking-part-1</guid><title>Testable networking code - Part 1</title><description>This is part 1 of a small series explaining how I made an existing networking stack testable</description><link>https://bearjaw.dev/posts/2023/2/build-testable-networking-part-1</link><pubDate>Sat, 18 Feb 2023 12:00:00 +0100</pubDate><content:encoded><![CDATA[<h1>Testable networking code - Part 1</h1><h2>A smallish intro</h2><p>If you browse job listings for iOS developers or generally for developers testability is always highlighted as very important. Clean architecture, writing tests have become buzzwords in the industry. Unfortunately it happens that when you get to peek behind the curtains you discover that there are no tests, the code is tightly coupled, and the task of even introducing tests feels impossible and you're left wondering why you jumped through all those hoops.</p><p>To be fair I haven't seen all the code bases in the world so this is purely based on my experiences and chats with other developers. I am sure there are many companies where tests are just as important as the features developers have to write.</p><p>I strongly support writing testable, well readable code and well also writing tests. I think what really helped me become a better developer and write better code was to venture out into different fields. At my joby job we tired to re-write our mobile app using a cross platform framework. There were many reason that went into this and my awesome colleague Catalin wrote a really great <a href="https://catalincodes.com/posts/when-to-use-nativescript">blog post</a> about how that went and why decided not to (thankfully) native apps.</p><p>While I really disliked the whole cross platform work itself it did teach me quite a lot much. I learned a new stack and was able to also start contributing to our Angular based website. The main point however is that we had a very thorough test driven development approach and it was the one thing I really longed for when getting back to working on the iOS app.</p><p>I already added some tests for some newer parts and features of the code base but due to the architecture and the massive code base I was never really able to make our existing ViewModels at least a bit more testable. However reinvigorated with my new knowledge I decided to give this a new try.</p><h2>Assembling the pieces</h2><p>So that was a long intro. Let's write some code. The app uses Alamofire under the hood so some of the code is specific to it but it's also quite easy to roll or apply this to your own networking stack. For that reason I decided to write a small wrapper around Alamofire and some of its features so it could be possible in the future to actually exchange the networking stack completely.</p><p>I started by abstracting away the actual method call we use to perform networking requests. For this I created an <code><span class="type">APIService</span></code> that would eventually make the request and handle the decoding. Generally the APIService is only used by a new <code><span class="type">Repository</span></code> class that would have the APIService injected into it.</p><p>The APIService itself needs a <code><span class="type">Session</span></code> and this is basically Alamofire's main class to make networking requests. Now this can't easily be abstracted away. You could create a protocol and add the <code><span class="call">request</span>()</code> method and make Session then conform to it but I wasn't convinced that it would bring much value for something that will not change for a very long time. And if it does you only have to fix it in one single place.</p><p>I did however write wrapper types Alamofire's <code><span class="type">HTTPMethod</span></code>, <code><span class="type">ParameterEncoding</span></code>, and <code><span class="type">HTTPHeaders</span></code>. Mainly because you'll be using these every time you create an APIRequest and believe me, we have quite a few.</p><pre><code><span class="keyword">struct</span> APIService {
+    
+    <span class="keyword">private let</span> session: <span class="type">Session</span>
+
+    <span class="keyword">init</span>(session: <span class="type">Session</span>) {
+        <span class="keyword">self</span>.<span class="property">session</span> = session
+    }
+
+     <span class="keyword">func</span> request&lt;T&gt;(request: <span class="type">APIRequest</span>&lt;<span class="type">T</span>&gt;,
+                completion: <span class="keyword">@escaping</span> (<span class="type">Result</span>&lt;<span class="type">T</span>, <span class="type">Error</span>&gt;) -&gt; <span class="type">Void</span>) <span class="keyword">where</span> <span class="type">T</span>: <span class="type">Decodable</span> {
+        session
+            .<span class="call">request</span>(request.<span class="property">url</span>,
+                     method: request.<span class="property">method</span>.<span class="property">alamofireMethod</span>,
+                     parameters: request.<span class="property">parameters</span>,
+                     encoding: request.<span class="property">alamofireEncoding</span>
+            )
+            .<span class="call">responseData</span> { response <span class="keyword">in</span>
+                <span class="comment">// handle response</span>
+            }
+    }
+}
+</code></pre><p>For simplicity I omitted the wrappers. Another goal of mine was to tie the response type to the request. This is easily achieved by leveraging generics and conforming <code><span class="type">T</span></code> to <code><span class="type">Decodable</span></code>. In the app I will not initialise any APIRequest in let's say a ViewModel or a Service. APIRequest come packaged in their API domain which are defined by enums. You'll see in a bit further down how it works.</p><p>The APIRequest struct is defined follows:</p><pre><code><span class="keyword">struct</span> APIRequest&lt;T: <span class="type">Decodable</span>&gt;  {
+
+    <span class="keyword">let</span> url: <span class="type">String</span>
+    <span class="keyword">let</span> method: <span class="type">HTTPMethod</span>
+    <span class="keyword">let</span> parameters: <span class="type">Parameters</span>?
+    <span class="keyword">let</span> encoding: <span class="type">ParameterEncoding</span>
+    <span class="keyword">let</span> headers: <span class="type">HTTPHeaders</span>?
+
+    <span class="keyword">init</span>(url: <span class="type">String</span>,
+         method: <span class="type">HTTPMethod</span> = .<span class="dotAccess">GET</span>,
+         parameters: <span class="type">Parameters</span>? = <span class="keyword">nil</span>,
+         encoding: <span class="type">ParameterEncoding</span> = .<span class="dotAccess">urlDefault</span>,
+         headers: <span class="type">HTTPHeaders</span>? = <span class="keyword">nil</span>) {
+        <span class="keyword">self</span>.<span class="property">url</span> = url
+        <span class="keyword">self</span>.<span class="property">method</span> = method
+        <span class="keyword">self</span>.<span class="property">parameters</span> = parameters
+        <span class="keyword">self</span>.<span class="property">encoding</span> = encoding
+        <span class="keyword">self</span>.<span class="property">headers</span> = headers
+    }
+
+}
+</code></pre><p>Now the last piece of the puzzle is the Repository. Before I started to incrementally introduce the new API approach, each API domain had it's own specific repository implementation. That created a lot of duplicated code. Basically the only thing that really changes are requests. That's why I created a general repository class class that would eventually be used by the app to make API requests. The session <code>apiClient</code> is just a global property that returns the production session by default. Alamofire's default session is a singleton so I am not introducing anything fancy here.</p><pre><code><span class="keyword">final class</span> Repository {
+
+    <span class="keyword">private let</span> httpClient: <span class="type">APIService</span>
+
+    <span class="keyword">init</span>(httpClient: <span class="type">APIService</span> = <span class="type">APIService</span>(session: apiClient)) {
+        <span class="keyword">self</span>.<span class="property">httpClient</span> = httpClient
+    }
+
+    <span class="keyword">func</span> performRequest&lt;T&gt;(<span class="keyword">_</span> request: <span class="type">APIRequest</span>&lt;<span class="type">T</span>&gt;,
+                           completion: <span class="keyword">@escaping</span> (<span class="type">Result</span>&lt;<span class="type">T</span>, <span class="type">Error</span>&gt;) -&gt; <span class="type">Void</span>) <span class="keyword">where</span> <span class="type">T</span> : <span class="type">Decodable</span> {
+        httpClient.<span class="call">request</span>(request: request, completion: completion)
+    }
+
+    <span class="keyword">deinit</span> {
+        <span class="type">LoggingService</span>.<span class="property">networking</span>.<span class="call">log_debug</span>(message: <span class="string">"\n\n Deinit:</span> \(<span class="call">type</span>(of: <span class="keyword">self</span>)) <span class="string">\n\n"</span>)
+    }
+
+}
+</code></pre><p>In addition to that I decided to move our API domains into enums and having static methods to create the APIRequest. This makes it quite nice to use. Let's assume I want to get the current user:</p><pre><code><span class="keyword">extension</span> <span class="type">APIEndpoint</span> {
+
+    <span class="keyword">enum</span> User {
+
+        <span class="keyword">private static let</span> baseURL = <span class="string">"api.some.domain.com"</span>
+
+        <span class="comment">// MARK: - Me</span>
+
+        <span class="keyword">static func</span> currentUser() -&gt; <span class="type">APIRequest</span>&lt;<span class="type">User</span>&gt; {
+            <span class="keyword">let</span> url = <span class="string">"</span>\(baseURL)<span class="string">)/users/current"</span>
+            <span class="keyword">return</span> <span class="type">APIRequest</span>(url: url)
+        }
+
+}
+
+<span class="comment">// somewhere in your code</span>
+<span class="keyword">let</span> request = <span class="type">APIEndpoint</span>.<span class="type">User</span>.<span class="call">currentUser</span>()
+repository.<span class="call">performRequest</span>(request) { result <span class="keyword">in
+    switch</span> result {
+        <span class="keyword">case let</span> .<span class="call">success</span>(user):
+            <span class="call">print</span>(<span class="string">"Hello</span> \(user.<span class="property">firstName</span>)<span class="string">"</span>)
+        <span class="keyword">case let</span> .<span class="call">failue</span>(error):
+            <span class="call">print</span>(<span class="string">"Oh no, an error:</span> \(error.<span class="property">localizedDescription</span>)<span class="string">"</span>)
+    }
+}
+</code></pre><h2>Testing requests</h2><p>After all the pieces of the puzzle have finally fallen into place it's time to write some tests.</p><p>First, like I did in Angular, I wanted to test my requests. This ensures that the correct url is used, the right parameters are included and so on.</p><p>To do this I created a simple extension on <code><span class="type">XCTestCase</span></code>. The extension is simply to reduce writing duplicate code and assertions. It also makes it easily extensible again.</p><pre><code>  <span class="keyword">func</span> testRequest&lt;T&gt;(<span class="keyword">_</span> request: <span class="type">APIRequest</span>&lt;<span class="type">T</span>&gt;,
+                        <span class="keyword">_</span> expectedRequest: <span class="type">APIRequest</span>&lt;<span class="type">T</span>&gt;,
+                        matchParams: ((<span class="type">Parameters</span>?) -&gt; <span class="type">Bool</span>)? = <span class="keyword">nil</span>,
+                        matchHeaders: ((<span class="type">HTTPHeaders</span>?) -&gt; <span class="type">Bool</span>)? = <span class="keyword">nil</span>) {
+
+        <span class="keyword">if let</span> matchHeaders {
+            <span class="call">XCTAssertTrue</span>(<span class="call">matchHeaders</span>(request.<span class="property">headers</span>))
+        } <span class="keyword">else</span> {
+            <span class="call">XCTAssertNil</span>(request.<span class="property">headers</span>)
+        }
+        <span class="keyword">if let</span> matchParams {
+            <span class="call">XCTAssertTrue</span>(<span class="call">matchParams</span>(request.<span class="property">parameters</span>))
+        } <span class="keyword">else</span> {
+            <span class="call">XCTAssertNil</span>(request.<span class="property">parameters</span>)
+        }
+
+        <span class="call">XCTAssertEqual</span>(request, expectedRequest, <span class="call">errorMessage</span>(got: request, expected: expectedRequest))
+    }
+</code></pre><p>Now you can easily write a test to make you everything is set up correctly.</p><pre><code><span class="keyword">final class</span> UserRepositoryTests: <span class="type">XCTestCase</span> {
+
+    <span class="keyword">func</span> test_current_user_request() {
+        <span class="keyword">let</span> request = <span class="type">APIEndpoint</span>
+            .<span class="dotAccess">User</span>
+            .<span class="call">currentUser</span>()
+
+        <span class="keyword">let</span> expectedURL = <span class="string">"someURL"</span>
+        <span class="keyword">let</span> expectedRequest = <span class="type">APIRequest</span>&lt;<span class="type">Empty</span>&gt;(url: expectedURL)
+
+        <span class="call">testRequest</span>(request, expectedRequest)
+    }
+}
+</code></pre><p>That's it for now. In part 2 I will explain how I test the repository itself, making sure the responses are decoded properly. All of this is also doable with <code><span class="keyword">async</span> / <span class="keyword">await</span></code>. However we still support older iOS versions and can't use that yet but the implementation is pretty much the same. Once we finally move to iOS 13 and upwards the whole code will be even nicer to write.</p><p>Thanks for reading 🐶</p>]]></content:encoded></item><item><guid isPermaLink="true">https://bearjaw.dev/posts/2023/1/hello</guid><title>Autolayout Wrapper</title><description>A brief dive into writing a wrapper around AutoLayout</description><link>https://bearjaw.dev/posts/2023/1/hello</link><pubDate>Sun, 29 Jan 2023 12:00:00 +0100</pubDate><content:encoded><![CDATA[<h1>Autolayout Wrapper</h1><h3><em>Disclaimer</em>:</h3><p><em>Yes, there are a lot of AutoLayout wrappers available. This is mainly me writing down my approach of creating a thin, lightweight, and flexible wrapper around AutoLayout.</em></p><h2>Some considerations</h2><p>There are many AutoLayout wrappers out there. A project that I worked on recently used <a href="https://github.com/SnapKit/SnapKit">SnapKit</a>. And while there’s nothing wrong with using third-party dependencies, I prefer to learn and understand Apple’s APIs first and then write a thin wrapper around it myself to make my life easier. It also saves you from adding another third-party-dependency to your app.</p><p>Now you could say why am I even bothering with all these old APIs and technologies and not use SwiftUI instead? Well, SwiftUI has only been around since iOS 13 which kind of limits your usage of SwiftUI in production if your app still needs to support older versions of iOS.</p><p>In personal projects I did start to experiment a little with SwiftUI but so far UIKit has been a good friend to me. There’s also no point in discussing whether you should <em>only</em> use or learn one or the other. Like many already pointed out it depends on what you want to do and they complement each other quite well.</p><h2>Time travel</h2><p>When I started out as an iOS developer AutoLayout wasn’t a thing yet, so I used to calculate my views’ origins and sizes manually like this:</p><pre><code><span class="keyword">import</span> UIKit
 
 <span class="keyword">final class</span> MyView: <span class="type">UIView</span> {
 
@@ -13,7 +129,7 @@
     }
     ...
 }
-</code></pre><p>While this method works well and can be quite efficient when it comes to rendering, it is definitely more verbose and time consuming than SwiftUI or AutoLayout (Once you finally get a hang of it). Another thing to keep in mind is that by calculating your frames directly, ideally dynamically, your UI probably wouldn't support right-to-left languages properly.</p><p>It took me quite some time to become familiar with AutoLayout. The API seems very cumbersome and heavy to use. To me most of the methods felt counterintuitive and seemed to do the opposite of what I expected. It definitely got better once we got <code>anchors</code> in iOS 9. However debugging AutoLayout is a mess and time consuming. There’s a reason why <a href="_https://www.wtfautolayout.com_">WTFAutoLayout</a> exists.</p><p>Sometimes it’s easy and you only forgot to set <code>view.<span class="property">translatesAutoresizingMaskIntoConstraints</span> = <span class="keyword">false</span></code>. Other times the height and vertical position are ambiguous and it seems impossible to grasp why. Also it's important to remember to call <code>constraint.<span class="property">active</span> = <span class="keyword">true</span></code> to actually tell the OS that it should use and evaluate that constraint. That’s quite a lot of things you always have to do and remember. It proved therefore quite useful to create a thin wrapper around common AutoLayout functionality.</p><p>This slows your development velocity down quite a bit. At the same time you might not always have the luxury to sit down and develop your own libraries to fix these issues during your day to day job. What you can do though is introduce this process step by step. Every time you find yourself writing a specific UI building block you could extract the code into a reusable function.</p><h2>Putting it all together</h2><p>One of the problems of AutoLayout is that when using constraints you need to remember to set <code>translatesAutoresizingMaskIntoConstraints</code> to <code><span class="keyword">false</span></code>. You can make your life easier by leveraging property wrappers. I really liked this option. It makes it clear to anyone reading your code that this view is using constraints and that our favourite property has already been set to <code><span class="keyword">false</span></code>. Property wrappers in general are an amazing tool to have in Swift.</p><pre><code><span class="keyword">@propertyWrapper
+</code></pre><p>While this method works well and can be quite efficient when it comes to rendering, it is definitely more verbose and time consuming than SwiftUI or AutoLayout (Once you finally get a hang of it). Another thing to keep in mind is that by calculating your frames directly, ideally dynamically, your UI probably wouldn't support right-to-left languages properly.</p><p>It took me quite some time to become familiar with AutoLayout. The API seems very cumbersome and heavy to use. To me most of the methods felt counterintuitive and seemed to do the opposite of what I expected. It definitely got better once we got <code>anchors</code> in iOS 9. However debugging AutoLayout is a mess and time consuming. There’s a reason why <a href="_https://www.wtfautolayout.com_">WTFAutoLayout</a> exists.</p><p>Sometimes it’s easy and you only forgot to set <code>view.<span class="property">translatesAutoresizingMaskIntoConstraints</span> = <span class="keyword">false</span></code>. Other times the height and vertical position are ambiguous and it seems impossible to grasp why. Also it's important to remember to call <code>constraint.<span class="property">active</span> = <span class="keyword">true</span></code> to actually tell the OS that it should use and evaluate that constraint. That’s quite a lot of things you always have to do and remember. It proved therefore quite useful to create a thin wrapper around common AutoLayout functionality.</p><p>This can slow your development velocity down quite a bit. At the same time you might not always have the luxury to sit down and develop your own libraries to fix these issues during your day to day job. What you can do though is introduce this process step by step. Every time you find yourself writing a specific UI building block you could extract the code into a reusable function.</p><h2>Putting it all together</h2><p>One of the problems of AutoLayout is that when using constraints you need to remember to set <code>translatesAutoresizingMaskIntoConstraints</code> to <code><span class="keyword">false</span></code>. You can make your life easier by leveraging property wrappers. I really liked this option. It makes it clear to anyone reading your code that this view is using constraints and that our favourite property has already been set to <code><span class="keyword">false</span></code>. Property wrappers in general are an amazing tool to have in Swift.</p><pre><code><span class="keyword">@propertyWrapper
 struct</span> AutoLayoutable&lt;T: <span class="type">UIView</span>&gt; {
     <span class="keyword">var</span> wrappedValue: <span class="type">T</span> {
         <span class="keyword">didSet</span> {
@@ -48,11 +164,11 @@ struct</span> AutoLayoutable&lt;T: <span class="type">UIView</span>&gt; {
     }
     
 }
-</code></pre><p>One thing I noticed is that sometimes you need to adjust the constant or activate or deactivate your constraints. Using <code><span class="keyword">@discardableResult</span></code> solves that issue quite well. Now you can get a reference to the constraint and animate a UI change for example.</p><p>Usally you also want some kind of spacing between two UI elements. The constant for trailling, bottom anchors uses a negative value and for top, leading uses positive values. Again this little <em>quirk</em> in AutoLayout is something that makes sense once you understand that it reflects the coordinate system of the OS. To make my life easier I only use positive values on the call site and my implementation handles the cases correctly.</p><h2>Conclusion</h2><p>I didn't include all extensions I created but the rest follow the same pattern so it's quite easy to extend and maintain. My layout code went from a lot of repetitive code to one liners:</p><pre><code><span class="keyword">private func</span> configureConstraints() {
+</code></pre><p>One thing I noticed is that sometimes you need to adjust the constant or activate or deactivate your constraints. Using <code><span class="keyword">@discardableResult</span></code> and returing the constraint solves that issue quite well. Now you can get a reference to the constraint and animate a UI change for example.</p><p>Usually you also want some kind of spacing between two UI elements. The constant for trailling, bottom anchors uses a negative value and for top, leading uses positive values. Again this little <em>quirk</em> in AutoLayout is something that makes sense once you understand that it reflects the coordinate system of the OS. To make my life easier I only use positive values on the call site and my implementation handles the cases correctly.</p><h2>Conclusion</h2><p>I didn't include all extensions I created but the rest follow the same pattern so it's quite easy to extend and maintain. My layout code went from a lot of repetitive code to one liners:</p><pre><code><span class="keyword">private func</span> configureConstraints() {
     titleLabel.<span class="call">pinToTop</span>(of: <span class="keyword">self</span>, space: spacer4)
     titleLabel.<span class="call">pinToSides</span>(of: <span class="keyword">self</span>, space: spacer4)
     detailLabel.<span class="call">pinTopToBottom</span>(of: <span class="keyword">self</span>, space: spacer2)
     detailLabel.<span class="call">pinToSides</span>(of: <span class="keyword">self</span>, space: spacer4)
     detailLabel.<span class="call">pinToBottom</span>(of: <span class="keyword">self</span>, space: spacer4)
 }
-</code></pre><p>This increased my speed in creating a completely new UIs immensely. Not only that but I gained a lot of readability and clear intend. Of course AutoLayout offers a lot more functionality and not everything is covered by my small library yet. But it also doesn't have to be complete. Since it's just an extension on UIView I can add functionality anytime I need it.</p><p>Since I adapted my small wrapper my broken AutoLayout constraints nearly vanished. There are still cases where you do need to scratch your head a little and think about content hugging priorities and compress resistances but that's also what keeps things interesting.</p><p>Thanks for readig! 🐶</p>]]></content:encoded></item></channel></rss>
+</code></pre><p>This increased my speed in creating a completely new UIs immensely. Not only that but I gained a lot of readability and clear intend. Of course AutoLayout offers a lot more functionality and not everything is covered by my small library yet. But it also doesn't have to be complete. Since it's just an extension on UIView I can add functionality anytime I need it.</p><p>Since I adapted my small wrapper my broken AutoLayout constraints nearly vanished. There are still cases where you do need to scratch your head a little and think about content hugging priorities and compress resistances but that's also what keeps things interesting.</p><p>Thanks for reading! 🐶</p>]]></content:encoded></item></channel></rss>

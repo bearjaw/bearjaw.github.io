@@ -1,0 +1,117 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"/><meta name="og:site_name" content="bearjaw.dev"/><link rel="canonical" href="https://bearjaw.dev/posts/2023/2/build-testable-networking-part-1"/><meta name="twitter:url" content="https://bearjaw.dev/posts/2023/2/build-testable-networking-part-1"/><meta name="og:url" content="https://bearjaw.dev/posts/2023/2/build-testable-networking-part-1"/><title>Testable networking code - Part 1 | bearjaw.dev</title><meta name="twitter:title" content="Testable networking code - Part 1 | bearjaw.dev"/><meta name="og:title" content="Testable networking code - Part 1 | bearjaw.dev"/><meta name="description" content="This is part 1 of a small series explaining how I made an existing networking stack testable"/><meta name="twitter:description" content="This is part 1 of a small series explaining how I made an existing networking stack testable"/><meta name="og:description" content="This is part 1 of a small series explaining how I made an existing networking stack testable"/><meta name="twitter:card" content="summary"/><link rel="stylesheet" href="/styles.css" type="text/css"/><link rel="stylesheet" href="/syntax.css" type="text/css"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><link rel="shortcut icon" href="/images/favicon.png" type="image/png"/><link rel="alternate" href="/feed.rss" type="application/rss+xml" title="Subscribe to bearjaw.dev"/></head><body class="item-page"><header><div class="header-container"><div class="profile-header-container"><img src="/images/profile.jpeg" class="avatar"/><div class="header-text-container"><a href="/" class="site-name">bearjaw.dev</a><p class="header-subtitle ">Doing swifty things 1-bit at a time 🚀</p></div></div><a href="https://github.com/bearjaw"><div class="github-logo"></div></a></div><nav><ul><li><a href="/posts" class="selected">Articles</a></li><li><a href="/about">About</a></li></ul></nav></header><div class="wrapper"><article><div class="article-info"><p>18 February 2023</p><p class="separator">•</p><p>6 minutes read</p></div><div class="content"><h1>Testable networking code - Part 1</h1><h2>A smallish intro</h2><p>If you browse job listings for iOS developers or generally for developers testability is always highlighted as very important. Clean architecture, writing tests have become buzzwords in the industry. Unfortunately it happens that when you get to peek behind the curtains you discover that there are no tests, the code is tightly coupled, and the task of even introducing tests feels impossible and you're left wondering why you jumped through all those hoops.</p><p>To be fair I haven't seen all the code bases in the world so this is purely based on my experiences and chats with other developers. I am sure there are many companies where tests are just as important as the features developers have to write.</p><p>I strongly support writing testable, well readable code and well also writing tests. I think what really helped me become a better developer and write better code was to venture out into different fields. At my joby job we tired to re-write our mobile app using a cross platform framework. There were many reason that went into this and my awesome colleague Catalin wrote a really great <a href="https://catalincodes.com/posts/when-to-use-nativescript">blog post</a> about how that went and why decided not to (thankfully) native apps.</p><p>While I really disliked the whole cross platform work itself it did teach me quite a lot much. I learned a new stack and was able to also start contributing to our Angular based website. The main point however is that we had a very thorough test driven development approach and it was the one thing I really longed for when getting back to working on the iOS app.</p><p>I already added some tests for some newer parts and features of the code base but due to the architecture and the massive code base I was never really able to make our existing ViewModels at least a bit more testable. However reinvigorated with my new knowledge I decided to give this a new try.</p><h2>Assembling the pieces</h2><p>So that was a long intro. Let's write some code. The app uses Alamofire under the hood so some of the code is specific to it but it's also quite easy to roll or apply this to your own networking stack. For that reason I decided to write a small wrapper around Alamofire and some of its features so it could be possible in the future to actually exchange the networking stack completely.</p><p>I started by abstracting away the actual method call we use to perform networking requests. For this I created an <code><span class="type">APIService</span></code> that would eventually make the request and handle the decoding. Generally the APIService is only used by a new <code><span class="type">Repository</span></code> class that would have the APIService injected into it.</p><p>The APIService itself needs a <code><span class="type">Session</span></code> and this is basically Alamofire's main class to make networking requests. Now this can't easily be abstracted away. You could create a protocol and add the <code><span class="call">request</span>()</code> method and make Session then conform to it but I wasn't convinced that it would bring much value for something that will not change for a very long time. And if it does you only have to fix it in one single place.</p><p>I did however write wrapper types Alamofire's <code><span class="type">HTTPMethod</span></code>, <code><span class="type">ParameterEncoding</span></code>, and <code><span class="type">HTTPHeaders</span></code>. Mainly because you'll be using these every time you create an APIRequest and believe me, we have quite a few.</p><pre><code><span class="keyword">struct</span> APIService {
+    
+    <span class="keyword">private let</span> session: <span class="type">Session</span>
+
+    <span class="keyword">init</span>(session: <span class="type">Session</span>) {
+        <span class="keyword">self</span>.<span class="property">session</span> = session
+    }
+
+     <span class="keyword">func</span> request&lt;T&gt;(request: <span class="type">APIRequest</span>&lt;<span class="type">T</span>&gt;,
+                completion: <span class="keyword">@escaping</span> (<span class="type">Result</span>&lt;<span class="type">T</span>, <span class="type">Error</span>&gt;) -&gt; <span class="type">Void</span>) <span class="keyword">where</span> <span class="type">T</span>: <span class="type">Decodable</span> {
+        session
+            .<span class="call">request</span>(request.<span class="property">url</span>,
+                     method: request.<span class="property">method</span>.<span class="property">alamofireMethod</span>,
+                     parameters: request.<span class="property">parameters</span>,
+                     encoding: request.<span class="property">alamofireEncoding</span>
+            )
+            .<span class="call">responseData</span> { response <span class="keyword">in</span>
+                <span class="comment">// handle response</span>
+            }
+    }
+}
+</code></pre><p>For simplicity I omitted the wrappers. Another goal of mine was to tie the response type to the request. This is easily achieved by leveraging generics and conforming <code><span class="type">T</span></code> to <code><span class="type">Decodable</span></code>. In the app I will not initialise any APIRequest in let's say a ViewModel or a Service. APIRequest come packaged in their API domain which are defined by enums. You'll see in a bit further down how it works.</p><p>The APIRequest struct is defined follows:</p><pre><code><span class="keyword">struct</span> APIRequest&lt;T: <span class="type">Decodable</span>&gt;  {
+
+    <span class="keyword">let</span> url: <span class="type">String</span>
+    <span class="keyword">let</span> method: <span class="type">HTTPMethod</span>
+    <span class="keyword">let</span> parameters: <span class="type">Parameters</span>?
+    <span class="keyword">let</span> encoding: <span class="type">ParameterEncoding</span>
+    <span class="keyword">let</span> headers: <span class="type">HTTPHeaders</span>?
+
+    <span class="keyword">init</span>(url: <span class="type">String</span>,
+         method: <span class="type">HTTPMethod</span> = .<span class="dotAccess">GET</span>,
+         parameters: <span class="type">Parameters</span>? = <span class="keyword">nil</span>,
+         encoding: <span class="type">ParameterEncoding</span> = .<span class="dotAccess">urlDefault</span>,
+         headers: <span class="type">HTTPHeaders</span>? = <span class="keyword">nil</span>) {
+        <span class="keyword">self</span>.<span class="property">url</span> = url
+        <span class="keyword">self</span>.<span class="property">method</span> = method
+        <span class="keyword">self</span>.<span class="property">parameters</span> = parameters
+        <span class="keyword">self</span>.<span class="property">encoding</span> = encoding
+        <span class="keyword">self</span>.<span class="property">headers</span> = headers
+    }
+
+}
+</code></pre><p>Now the last piece of the puzzle is the Repository. Before I started to incrementally introduce the new API approach, each API domain had it's own specific repository implementation. That created a lot of duplicated code. Basically the only thing that really changes are requests. That's why I created a general repository class class that would eventually be used by the app to make API requests. The session <code>apiClient</code> is just a global property that returns the production session by default. Alamofire's default session is a singleton so I am not introducing anything fancy here.</p><pre><code><span class="keyword">final class</span> Repository {
+
+    <span class="keyword">private let</span> httpClient: <span class="type">APIService</span>
+
+    <span class="keyword">init</span>(httpClient: <span class="type">APIService</span> = <span class="type">APIService</span>(session: apiClient)) {
+        <span class="keyword">self</span>.<span class="property">httpClient</span> = httpClient
+    }
+
+    <span class="keyword">func</span> performRequest&lt;T&gt;(<span class="keyword">_</span> request: <span class="type">APIRequest</span>&lt;<span class="type">T</span>&gt;,
+                           completion: <span class="keyword">@escaping</span> (<span class="type">Result</span>&lt;<span class="type">T</span>, <span class="type">Error</span>&gt;) -&gt; <span class="type">Void</span>) <span class="keyword">where</span> <span class="type">T</span> : <span class="type">Decodable</span> {
+        httpClient.<span class="call">request</span>(request: request, completion: completion)
+    }
+
+    <span class="keyword">deinit</span> {
+        <span class="type">LoggingService</span>.<span class="property">networking</span>.<span class="call">log_debug</span>(message: <span class="string">"\n\n Deinit:</span> \(<span class="call">type</span>(of: <span class="keyword">self</span>)) <span class="string">\n\n"</span>)
+    }
+
+}
+</code></pre><p>In addition to that I decided to move our API domains into enums and having static methods to create the APIRequest. This makes it quite nice to use. Let's assume I want to get the current user:</p><pre><code><span class="keyword">extension</span> <span class="type">APIEndpoint</span> {
+
+    <span class="keyword">enum</span> User {
+
+        <span class="keyword">private static let</span> baseURL = <span class="string">"api.some.domain.com"</span>
+
+        <span class="comment">// MARK: - Me</span>
+
+        <span class="keyword">static func</span> currentUser() -&gt; <span class="type">APIRequest</span>&lt;<span class="type">User</span>&gt; {
+            <span class="keyword">let</span> url = <span class="string">"</span>\(baseURL)<span class="string">)/users/current"</span>
+            <span class="keyword">return</span> <span class="type">APIRequest</span>(url: url)
+        }
+
+}
+
+<span class="comment">// somewhere in your code</span>
+<span class="keyword">let</span> request = <span class="type">APIEndpoint</span>.<span class="type">User</span>.<span class="call">currentUser</span>()
+repository.<span class="call">performRequest</span>(request) { result <span class="keyword">in
+    switch</span> result {
+        <span class="keyword">case let</span> .<span class="call">success</span>(user):
+            <span class="call">print</span>(<span class="string">"Hello</span> \(user.<span class="property">firstName</span>)<span class="string">"</span>)
+        <span class="keyword">case let</span> .<span class="call">failue</span>(error):
+            <span class="call">print</span>(<span class="string">"Oh no, an error:</span> \(error.<span class="property">localizedDescription</span>)<span class="string">"</span>)
+    }
+}
+</code></pre><h2>Testing requests</h2><p>After all the pieces of the puzzle have finally fallen into place it's time to write some tests.</p><p>First, like I did in Angular, I wanted to test my requests. This ensures that the correct url is used, the right parameters are included and so on.</p><p>To do this I created a simple extension on <code><span class="type">XCTestCase</span></code>. The extension is simply to reduce writing duplicate code and assertions. It also makes it easily extensible again.</p><pre><code>  <span class="keyword">func</span> testRequest&lt;T&gt;(<span class="keyword">_</span> request: <span class="type">APIRequest</span>&lt;<span class="type">T</span>&gt;,
+                        <span class="keyword">_</span> expectedRequest: <span class="type">APIRequest</span>&lt;<span class="type">T</span>&gt;,
+                        matchParams: ((<span class="type">Parameters</span>?) -&gt; <span class="type">Bool</span>)? = <span class="keyword">nil</span>,
+                        matchHeaders: ((<span class="type">HTTPHeaders</span>?) -&gt; <span class="type">Bool</span>)? = <span class="keyword">nil</span>) {
+
+        <span class="keyword">if let</span> matchHeaders {
+            <span class="call">XCTAssertTrue</span>(<span class="call">matchHeaders</span>(request.<span class="property">headers</span>))
+        } <span class="keyword">else</span> {
+            <span class="call">XCTAssertNil</span>(request.<span class="property">headers</span>)
+        }
+        <span class="keyword">if let</span> matchParams {
+            <span class="call">XCTAssertTrue</span>(<span class="call">matchParams</span>(request.<span class="property">parameters</span>))
+        } <span class="keyword">else</span> {
+            <span class="call">XCTAssertNil</span>(request.<span class="property">parameters</span>)
+        }
+
+        <span class="call">XCTAssertEqual</span>(request, expectedRequest, <span class="call">errorMessage</span>(got: request, expected: expectedRequest))
+    }
+</code></pre><p>Now you can easily write a test to make you everything is set up correctly.</p><pre><code><span class="keyword">final class</span> UserRepositoryTests: <span class="type">XCTestCase</span> {
+
+    <span class="keyword">func</span> test_current_user_request() {
+        <span class="keyword">let</span> request = <span class="type">APIEndpoint</span>
+            .<span class="dotAccess">User</span>
+            .<span class="call">currentUser</span>()
+
+        <span class="keyword">let</span> expectedURL = <span class="string">"someURL"</span>
+        <span class="keyword">let</span> expectedRequest = <span class="type">APIRequest</span>&lt;<span class="type">Empty</span>&gt;(url: expectedURL)
+
+        <span class="call">testRequest</span>(request, expectedRequest)
+    }
+}
+</code></pre><p>That's it for now. In part 2 I will explain how I test the repository itself, making sure the responses are decoded properly. All of this is also doable with <code><span class="keyword">async</span> / <span class="keyword">await</span></code>. However we still support older iOS versions and can't use that yet but the implementation is pretty much the same. Once we finally move to iOS 13 and upwards the whole code will be even nicer to write.</p><p>Thanks for reading 🐶</p></div><span>Tagged with: </span><ul class="tag-list"><li><a href="/tags/networking">networking</a></li><li><a href="/tags/swift">swift</a></li><li><a href="/tags/testable-networking-series">testable networking series</a></li><li><a href="/tags/testing">testing</a></li></ul></article></div><footer><p>Generated using <a href="https://github.com/johnsundell/publish">Publish</a></p><p><a href="/feed.rss">RSS feed</a></p><p>© Max Baumbach, 2023 </p></footer></body></html>
