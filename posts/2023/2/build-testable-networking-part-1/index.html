@@ -84,9 +84,9 @@ repository.<span class="call">performRequest</span>(request) { result <span clas
     }
 }
 </code></pre><h2>Testing requests</h2><p>After all the pieces of the puzzle have finally fallen into place it's time to write some tests.</p><p>First, like I did in Angular, I wanted to test my requests. This ensures that the correct url is used, the right parameters are included and so on.</p><p>To do this I created a simple extension on <code><span class="type">XCTestCase</span></code>. The extension is simply to reduce writing duplicate code and assertions. It also makes it easily extensible again.</p><pre><code>  <span class="keyword">func</span> testRequest&lt;T&gt;(<span class="keyword">_</span> request: <span class="type">APIRequest</span>&lt;<span class="type">T</span>&gt;,
-                        <span class="keyword">_</span> expectedRequest: <span class="type">APIRequest</span>&lt;<span class="type">T</span>&gt;,
-                        matchParams: ((<span class="type">Parameters</span>?) -&gt; <span class="type">Bool</span>)? = <span class="keyword">nil</span>,
-                        matchHeaders: ((<span class="type">HTTPHeaders</span>?) -&gt; <span class="type">Bool</span>)? = <span class="keyword">nil</span>) {
+                    <span class="keyword">_</span> expectedRequest: <span class="type">APIRequest</span>&lt;<span class="type">T</span>&gt;,
+                    matchParams: ((<span class="type">Parameters</span>?) -&gt; <span class="type">Bool</span>)? = <span class="keyword">nil</span>,
+                    matchHeaders: ((<span class="type">HTTPHeaders</span>?) -&gt; <span class="type">Bool</span>)? = <span class="keyword">nil</span>) {
 
         <span class="keyword">if let</span> matchHeaders {
             <span class="call">XCTAssertTrue</span>(<span class="call">matchHeaders</span>(request.<span class="property">headers</span>))
