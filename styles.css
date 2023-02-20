@@ -12,7 +12,6 @@
 body {
     background: #fff;
     color: #000;
-    font-family: Charter, Helvetica, Arial;
     text-align: center;
 }
 
@@ -39,7 +38,7 @@ header a {
 }
 
 header .site-name {
-    font-size: 1.5em;
+    font-size: 1.5rem;
     color: #000;
     font-weight: bold;
 }
@@ -76,20 +75,24 @@ nav li a:hover, li.active a {
 
 h1 {
     margin-bottom: 20px;
-    font-size: 2em;
+    font-size: 2.5rem;
+    font-family: Arial, Helvetica, sans-serif;
 }
 
 h2 {
     margin: 20px 0;
+    font-family: Arial, Helvetica, sans-serif;
 }
 
 h3  {
     margin: 20px 0; 
+    font-family: Arial, Helvetica, sans-serif;
 }
 
 p {
     margin-bottom: 10px;
-    line-height: 1.5em;
+    line-height: 1.6em;
+    font-family: Arial, Helvetica, sans-serif;
 }
 
 a {
@@ -135,6 +138,12 @@ header .header-text-container {
   border-radius: 50%;
 }
 
+.article-info-container {
+    max-width: min(80ch, 100%);
+    margin-left: auto;
+    margin-right: auto;
+}
+
 .article-info {
     display: flex;
     flex-direction: row;
@@ -154,7 +163,7 @@ header .header-text-container {
 }
 
 header .header-subtitle {
-        font-style: italic;
+    font-style: italic;
 }
 
 header {
@@ -175,7 +184,11 @@ header {
 
 .item-list h1 {
     margin-bottom: 15px;
-    font-size: 1.3em;
+    font-size: 1.3rem;
+}
+
+.item-list a {
+    text-decoration: none;
 }
 
 .item-list p {
@@ -201,6 +214,12 @@ header {
 
 .item-page .tag-list {
     display: inline-block;
+}
+
+.content {
+    max-width: min(80ch, 100%);
+    margin-left: auto;
+    margin-right: auto;
 }
 
 @keyframes slideInLeft {
@@ -245,6 +264,7 @@ header {
     animation-name: slideInLeft;
     animation-delay: 0.1s;
     animation-fill-mode: forwards;
+    font-family: Arial, Helvetica, sans-serif;
 }
 
 .content h2 {
@@ -253,6 +273,7 @@ header {
     animation-name: slideInLeft;
     animation-delay: 0.1s;
     animation-fill-mode: forwards;
+    font-family: Arial, Helvetica, sans-serif;
 }
 
 .content h3 {
@@ -261,6 +282,7 @@ header {
     animation-name: slideInLeft;
     animation-delay: 0.1s;
     animation-fill-mode: forwards;
+    font-family: Arial, Helvetica, sans-serif;
 }
 
 .content p {
@@ -269,6 +291,9 @@ header {
     animation-name: slideInRight;
     animation-delay: 0.1s;
     animation-fill-mode: forwards;
+    line-height: 1.6em;
+    font-size: 1.2rem;
+    font-family: Charter, Helvetica, Arial;
 }
 
 .content pre {
@@ -293,7 +318,7 @@ header {
 }
 
 .all-tags li {
-    font-size: 1.4em;
+    font-size: 1.4rem;
     margin-right: 10px;
     padding: 6px 10px;
 }
