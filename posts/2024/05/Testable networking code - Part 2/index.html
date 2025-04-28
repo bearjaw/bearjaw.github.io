@@ -1,0 +1,87 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"/><meta property="og:site_name" content="bearjaw.dev"/><link rel="canonical" href="https://bearjaw.dev/posts/2024/05/Testable%20networking%20code%20-%20Part%202"/><meta name="twitter:url" content="https://bearjaw.dev/posts/2024/05/Testable%20networking%20code%20-%20Part%202"/><meta property="og:url" content="https://bearjaw.dev/posts/2024/05/Testable%20networking%20code%20-%20Part%202"/><title>Testable Networking Code – Part 2 | bearjaw.dev</title><meta name="twitter:title" content="Testable Networking Code – Part 2 | bearjaw.dev"/><meta property="og:title" content="Testable Networking Code – Part 2 | bearjaw.dev"/><meta name="description" content="In this part 2 we're looking at how to leverage protocols to make your networking code testable."/><meta name="twitter:description" content="In this part 2 we're looking at how to leverage protocols to make your networking code testable."/><meta property="og:description" content="In this part 2 we're looking at how to leverage protocols to make your networking code testable."/><meta name="twitter:card" content="summary"/><link rel="stylesheet" href="/syntax.css" type="text/css"/><link rel="stylesheet" href="/styles.css" type="text/css"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><link rel="shortcut icon" href="/images/favicon.png" type="image/png"/><link rel="alternate" href="/feed.rss" type="application/rss+xml" title="Subscribe to bearjaw.dev"/></head><body class="item-page"><header><div class="header-container"><div class="profile-header-container"><a href="/"><img src="/profile.jpeg" class="avatar"/></a><div class="header-text-container"><a href="/" class="site-name">bearjaw.dev</a><p class="header-subtitle">Doing swifty things 1-bit at a time 🚀</p></div></div><div class="nav-container"><a href="https://github.com/bearjaw"><div class="github-logo"></div></a><nav><ul><li><a href="/posts" class="selected">Articles</a></li><li><a href="/about">About</a></li></ul></nav></div></div></header><div class="wrapper"><article class="article"><div class="article-header"><h1 class="article-title">Testable Networking Code – Part 2</h1><div class="article-info"><p>4 May 2024</p><p class="separator">•</p><p>5 minutes read</p></div></div><div class="article-tags"><span>Tagged with: </span><ul class="tag-list"><li><a href="/tags/networking">networking</a></li><li><a href="/tags/swift">swift</a></li><li><a href="/tags/testable-networking-series">testable networking series</a></li><li><a href="/tags/testing">testing</a></li></ul></div><div class="content"><h2>Introduction</h2><p>There are many paths you can take to make your code testable, especially when it comes to networking.</p><p>In this part, I'll walk through how to leverage protocols to improve testability.<br>Instead of having an <code><span class="type">APIService</span></code> class or struct that directly performs requests, we'll create a simple protocol, a mock APIService, and make both conform to the protocol.</p><hr><h2>Defining a Protocol</h2><pre><code><span class="keyword">protocol</span> APIRequestable {
+    <span class="keyword">func</span> performRequest&lt;T: <span class="type">Decodable</span>&gt;(<span class="keyword">_</span> request: <span class="type">APIRequest</span>&lt;<span class="type">T</span>&gt;) <span class="keyword">async throws</span> -&gt; <span class="type">T</span>
+}
+
+<span class="comment">// Implementation</span>
+<span class="keyword">final class</span> APIServiceMock: <span class="type">APIRequestable</span> {
+    <span class="keyword">func</span> performRequest&lt;T: <span class="type">Decodable</span>&gt;(<span class="keyword">_</span> request: <span class="type">APIRequest</span>&lt;<span class="type">T</span>&gt;) <span class="keyword">async throws</span> -&gt; <span class="type">T</span> {
+        <span class="call">fatalError</span>(<span class="string">"TODO: Implement"</span>)
+    }
+}
+</code></pre><p>This looks easy and reusable. Now you can use APIRequestable in your real and test implementations by implementing both the real service and a mock version. Instead of depending directly on APIService, you’ll depend on the protocol.</p><p>For simplicity let's use the poor man's dependency injection:</p><pre><code><span class="keyword">final class</span> UserProfileViewModel {
+
+    <span class="keyword">private let</span> apiService: <span class="type">APIRequestable</span>
+    <span class="keyword">private var</span> user: <span class="type">User</span>?
+    
+    <span class="keyword">init</span>(apiService: <span class="type">APIRequestable</span>) {
+        <span class="keyword">self</span>.<span class="property">apiService</span> = apiService
+    }
+    
+    <span class="keyword">func</span> fetchCurrentUser() <span class="keyword">async throws</span> {
+        <span class="keyword">let</span> request = <span class="type">APIEndpoint</span>.<span class="type">User</span>.<span class="call">current</span>()
+        user = <span class="keyword">try await</span> apiService.<span class="call">performRequest</span>(request)
+    }
+    
+    <span class="keyword">func</span> greeting() -&gt; <span class="type">String</span> {
+    <span class="keyword">if let</span> user {
+        <span class="keyword">return</span> <span class="string">"Hello,</span> \(name)<span class="string">!"</span>
+    }
+        <span class="keyword">return</span> <span class="string">"Hello!"</span>
+    }
+}
+
+...
+
+<span class="comment">// In your test</span>
+<span class="keyword">func</span> test_fetches_currentUser() <span class="keyword">async throws</span> {
+    <span class="keyword">let</span> mockAPIService = <span class="type">APIServiceMock</span>()
+    <span class="keyword">let</span> sut = <span class="type">UserProfileViewModel</span>(apiService: mockAPIService)
+    <span class="keyword">try await</span> sut.<span class="call">fetchCurrentUser</span>()
+    <span class="keyword">let</span> expectedGreeting = <span class="string">"Hello, Tim!"</span>
+    <span class="keyword">let</span> greeting = sut.<span class="call">greeting</span>()
+    <span class="call">XCTAssertEqual</span>(greeting, expectedGreeting)
+} 
+
+</code></pre><h2>An approach and a problem</h2><p>While writing a mock can be very little work we're running into a small problem with our networking layer or data pipeline. We're not really in control of the data. Or at least it's very inflexible as we have to return different data per endpoint or even chain endpoints.</p><p>Another common approach is to create a protocol for the <code><span class="type">UserProfileViewModel</span></code>, implement <code><span class="keyword">func</span> loadCurrentUser() <span class="keyword">async throws</span></code> and always return a user or create another mock and throw an error. You could even inject the response you want this method to return here as well.</p><p>So let's do that quickly (We could also just use Swift's <code><span class="type">Result</span></code> type):</p><pre><code><span class="keyword">enum</span> UserTestAPIResponse {
+    <span class="keyword">case</span> user(<span class="type">User</span>)
+    <span class="keyword">case</span> error(<span class="type">Error</span>)
+}
+</code></pre><p>Then we can create a mock class of the ViewModel, implement the protocol to fetch the current user, and return the injected API response.</p><pre><code><span class="keyword">let</span> testResponse: <span class="type">UserTestAPIResponse</span>
+...
+<span class="keyword">func</span> loadCurrentUser() <span class="keyword">async throws</span> {
+    <span class="keyword">switch</span> testResponse {
+        <span class="keyword">case let</span> user(user): 
+            <span class="keyword">self</span>.<span class="property">user</span> = user
+    <span class="keyword">case let</span> error(error):
+            <span class="keyword">throw</span> error
+    }
+}
+   
+<span class="comment">// In your test</span>
+<span class="keyword">func</span> test_fetches_currentUser() <span class="keyword">async throws</span> {
+    <span class="keyword">let</span> expectedUser = <span class="type">User</span>(name: <span class="string">"Tim"</span>)
+    <span class="keyword">let</span> response = <span class="type">UserTestAPIResponse</span>.<span class="call">user</span>(expectedUser)
+    
+    <span class="keyword">let</span> sut = <span class="type">UserProfileViewModelMock</span>(fetchUserResponse: response)
+
+    <span class="keyword">try await</span> sut.<span class="call">loadCurrentUser</span>()
+    
+    <span class="keyword">let</span> expectedGreeting = <span class="string">"Hello, Tim!"</span>
+    <span class="keyword">let</span> greeting = sut.<span class="call">greeting</span>()
+    <span class="call">XCTAssertEqual</span>(greeting, expectedGreeting)
+} 
+</code></pre><p>Now the test will pass again and we're happy but the way we got there is not great, we're also not really testing anything, and it doesn't scale.</p><p>It looks pretty flexible until you realise that you probably have more than one api call in your viewModel. You'll probably need more responses. Some api calls might be chained. You could create a dictionary and create a unique key for each api call and return it's response. Additionally we had to copy our implementation of <code><span class="call">greeting</span>()</code>. Not really DRY and what if our real implementation of <code><span class="call">greeting</span>()</code> ever changes?</p><p>So, now you might say subclassing to the rescue! Again, something you could do and you might not have to duplicate your code that way but I do prefer composition if possible over inheritance.</p><p>It becomes clear we don't really test our viewModel code but rather test a different part of code using a mock version of our viewModel. Depending on what we want to test we're forced to duplicate our real implementation code.</p><p>It's a lot of overhead and and a lot of mocks and classes you need to write. You'll spend more time setting up your mock pipeline than writing tests.</p><p>One thing to keep in mind is generally in blog posts or tutorials, the code is always super clean, easy to read, and very small. So while it looks trivial and small it could grow quite fast and we'll also need to maintain our mocks and our responses.</p><h2>A better way?</h2><p>Let's go back to the APIService. It's a better option to put the all the heavy lifting code we need to return the correct responses we want to test in our APIServiceMock implementation. However we'll end up in the same situation as with our ViewModel. We're not really testing our real networking / api layer here. We're testing a mock implementation of it.</p><pre><code><span class="comment">// In your test</span>
+<span class="keyword">func</span> test_fetches_currentUser() <span class="keyword">async throws</span> {
+    <span class="keyword">let</span> expectedUser = <span class="type">User</span>(name: <span class="string">"Tim"</span>)
+    <span class="keyword">let</span> response = <span class="type">UserTestAPIResponse</span>.<span class="call">user</span>(expectedUser)
+    <span class="keyword">let</span> mockAPIService = <span class="type">UserAPIServiceMock</span>(response: response)
+    
+    <span class="keyword">let</span> sut = <span class="type">UserProfileViewModel</span>(apiService: mockAPIService)
+    
+    <span class="keyword">try await</span> sut.<span class="call">fetchCurrentUser</span>()
+    
+    <span class="keyword">let</span> expectedGreeting = <span class="string">"Hello, Tim!"</span>
+    <span class="keyword">let</span> greeting = sut.<span class="call">greeting</span>()
+    <span class="call">XCTAssertEqual</span>(greeting, expectedGreeting)
+} 
+</code></pre><p>This approach is a lot better as we no longer have to copy the real implementation of our ViewModel or Model and instead leverage our mock to return the response we want. We also cover the real implementation of our ViewModel with our tests and we no longer need to keep the mock in sync with our actual implementation.</p><h2>Conclusion</h2><p>Protocols are a great tool to abstract away concrete types and make your code testable. However, they can also introduce a lot of boilerplate if you’re not careful.</p><p>When choosing this approach I found that it's easier to write tests and iterate if I can control the data rather than the UI layer (ViewModel). It might seem irrelvant but if you mock the data pipeline then you only have to write a mock for the service. You could even implement a mock per test.</p><p>In a future post I'll leverage my favourite way to take control over the data pipeline.</p></div><div class="article-footer"><h3>Enjoyed this article?</h3><p>Find more like this in the archive.</p><a href="/posts" class="browse-posts">Browse all posts</a></div></article></div><footer><div class="footer-content"><div class="footer-section"><h3>About</h3><p>A blog about Swift, iOS, and software development.</p><a href="/feed.rss" class="footer-link">RSS feed</a></div><div class="footer-section"><h3>Connect</h3><div class="footer-links"><a href="https://github.com/bearjaw" class="footer-link">GitHub</a></div></div></div><div class="footer-copyright"><p>© Max Baumbach, 2025 • Generated using <a href="https://github.com/johnsundell/publish">Publish</a></p></div></footer></body></html>
