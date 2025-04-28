@@ -69,3 +69,61 @@ pre code .dotAccess {
 pre code .preprocessing {
     color: #b68a00;
 }
+
+/* Light Mode Syntax Highlighting */
+@media (prefers-color-scheme: light) {
+    pre {
+        background-color: #f5f7fa;
+        border: 1px solid #e0e0e0;
+    }
+    
+    pre code {
+        color: #2a2a2a;
+    }
+    
+    p code {
+        background-color: #f5f7fa;
+        border: 1px solid #e0e0e0;
+        color: #2E6D80;
+    }
+    
+    code {
+        color: #2E6D80;
+    }
+    
+    pre code .dotAccess {
+        color: #5a7100;
+    }
+    
+    pre code .preprocessing {
+        color: #7d6000;
+    }
+    
+    pre code .keyword {
+        color: #af3670;
+    }
+    
+    pre code .type {
+        color: #2E6D80;
+    }
+    
+    pre code .call {
+        color: #3D8574;
+    }
+    
+    pre code .property {
+        color: #0f77b3;
+    }
+    
+    pre code .number {
+        color: #ad3e2a;
+    }
+    
+    pre code .string {
+        color: #c64000;
+    }
+    
+    pre code .comment {
+        color: #65737e;
+    }
+}
